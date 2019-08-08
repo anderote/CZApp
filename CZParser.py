@@ -2,7 +2,7 @@ import Equation as eq
 import json
 import os
 from unittest import TestCase
-from AbstractClasses import TwoParameterFunction
+from CZMathematics import TwoParameterFunction
 import logging
 
 
@@ -161,16 +161,16 @@ class Parser:
 
                 self.raw = fun_template["raw"]
 
-                # we may have additional descriptors, names, etc, which are stored in fun.
-                # to force getter/setter methods we expose the A and B parameters directly in the class
-                # in addition to the text, though these could be left inside function_template
+                # storing the template adds more memory overhead but lets us be more flexible
+                # in what is considered a valid function, i.e. allowing missing descriptors
+                # also makes it easier to save functions.
                 self.function_template = fun_template
 
             def get_name(self):
                 try:
                     return self.function_template["name"]
                 except KeyError:
-                    return "Unnamed Function"
+                    return "Unnamed_Function"
 
             def get_raw(self):
                 return self.raw
@@ -179,7 +179,7 @@ class Parser:
                 try:
                     return self.function_template[key]
                 except KeyError:
-                    return self.function_template["Note"]
+                    return ""
 
             def set_A_value(self, A):
                 try:
@@ -208,8 +208,8 @@ class Parser:
             def evaluate(self, value):
                 # f could be defined as a class attribute but would require storing the Expression object in memory.
                 # by declaring it locally it is thrown away and we only need store the text it is derived from.
+                # This saves memory overhead at the cost of run-time performance in evaluating functions
 
-                # f should be declared only once if there are repeated calls to evaluate that are performance demanding
                 try:
                     f = eq.Expression(self.raw, ["x", "A", "B"])
                     result = f(x=value, A=self.A, B=self.B)
