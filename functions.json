@@ -33,14 +33,14 @@
         "name": "Unparameterized Function",
         "desc": "Missing parameters A and B",
         "type" : "analytic",
-        "raw": "A*x + B*x^2",
+        "raw": "A*sin(x)*e^(B*x)",
         "A_desc": "Amplitude",
         "B_desc": "Frequency"
     },
     {
         "name": "Undescribed function",
         "type" : "analytic",
-        "raw": "A*x + B*x^2",
+        "raw": "A*x - B*x^0.5",
         "A": "1.0",
         "B": "2.0"
     },

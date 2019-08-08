@@ -14,6 +14,22 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 from CZParser import Parser
 from CZMathematics import Dataset
 
+"""
+Priority list of implementation
+- enable clearing of plots
+-setting / changing domains
+-saving domains as part of dataset names
+-display more information on function click
+-edit existing functions in the list
+-add new functions
+-delete functions
+
+"function toolbar"
+- Modify, New, Delete
+"dataset toolbar"
+- Plot Selected (deletes existing plots), Clear Plots, Add to plot (adds to existing plot), Operation ( smoothing etc)
+"""
+
 class MainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
@@ -97,9 +113,13 @@ class MainWindow(QMainWindow):
         generate_button = QPushButton('Generate', self)
         generate_button.clicked.connect(self.generate_data)
 
+        clear_plots_button = QPushButton('Clear Plots', self)
+        clear_plots_button.clicked.connect(self.clear_plots)
+
         hlay2 = QHBoxLayout()
         hlay2.addWidget(generate_button)
         hlay2.addWidget(plotsel_button)
+        hlay2.addWidget(clear_plots_button)
         hlay2.addItem(QSpacerItem(1000, 10, QSizePolicy.Expanding))
         vlay.addLayout(hlay2)
 
@@ -118,16 +138,19 @@ class MainWindow(QMainWindow):
         """
         Populates the list of functions with function objects as read from a .json file
         """
-        file_name, _ = QFileDialog.getOpenFileName(self, 'Single File', os.getcwd(), '*.json')
-        parser = Parser(file_name)
+        try:
+            file_name, _ = QFileDialog.getOpenFileName(self, 'Single File', os.getcwd(), '*.json')
+            parser = Parser(file_name)
 
-        for idx, _ in enumerate(parser.functions):
-            function = parser.returnFunction(idx)
-            self.function_list.append(function)
-            # TODO: implement a table instead of a list that also shows function names / parameters / desc
-            self.function_list_widget.addItem(function.get_raw())
+            for idx, _ in enumerate(parser.functions):
+                function = parser.returnFunction(idx)
+                self.function_list.append(function)
+                # TODO: implement a table instead of a list that also shows function names / parameters / desc
+                self.function_list_widget.addItem(function.get_raw())
 
-        self.statusBar().showMessage("Loaded functions from " + file_name)
+            self.statusBar().showMessage("Loaded functions from " + file_name)
+        except:
+            self.statusBar().showMessage("Failed to load functions or invalid path specified")
 
     def function_clicked(self):
         """
@@ -135,7 +158,6 @@ class MainWindow(QMainWindow):
         """
 
         self.current_function_idx = self.function_list_widget.currentRow()
-
         current_fun = self.function_list[self.current_function_idx]
         display_message = current_fun.get_name()
         self.statusBar().showMessage(display_message)
@@ -151,24 +173,34 @@ class MainWindow(QMainWindow):
         """
         Applies the current function to the current domain and adds a dataset object to the list of datasets
         """
-        fun = self.function_list[self.current_function_idx]
-        data = fun.evaluate(self.domain)
-        data_name = (fun.get_name() + '_' + str(np.min(self.domain)) +
-                     '_to_' + str(np.max(self.domain)))
-        dataset = Dataset(data_name, self.domain, data)
-        self.statusBar().showMessage("Generated dataset " + data_name)
+        try:
+            fun = self.function_list[self.current_function_idx]
+            data = fun.evaluate(self.domain)
+            data_name = (fun.get_name() + '_' + str(np.min(self.domain)) +
+                         '_to_' + str(np.max(self.domain)))
+            dataset = Dataset(data_name, self.domain, data)
+            self.statusBar().showMessage("Generated dataset " + data_name + " at " + str(dataset.timestamp))
+            self.dataset_list.append(dataset)
+            self.dataset_list_widget.addItem(data_name)
+        except:
+            self.statusBar().showMessage("No functions or domain selected to generate data")
+            logging.error("Attempted to generate data with no functions or data selected")
 
-        self.dataset_list.append(dataset)
-        self.dataset_list_widget.addItem(data_name)
 
     def dataset_clicked(self):
         self.current_dataset_idx = self.dataset_list_widget.currentRow()
         dataset = self.dataset_list[self.current_dataset_idx]
-        self.statusBar().showMessage("Dataset " + dataset.name + " generated at " + dataset.timestamp)
+        self.statusBar().showMess
+        # self.statusBar().showMessage("Dataset " + dataset.name + " generated at " + str(dataset.timestamp))
 
     def plot_selected_dataset(self):
-        dataset = self.dataset_list[self.current_dataset_idx]
-        self.plotting_window.canvas.plot(dataset)
+        try:
+            dataset = self.dataset_list[self.current_dataset_idx]
+            self.plotting_window.canvas.plot(dataset)
+        except:
+            self.statusBar().showMessage("No dataset selected to plot")
+            logging.error("Attempted to plot data with no dataset selected")
+
 
 
     def listItemDoubleClicked(self):
@@ -194,7 +226,7 @@ class MainWindow(QMainWindow):
         Resets the Plotter
         :return:
         """
-        self.plotting_window = Plotter()
+        self.plotting_window.clear_plots()
 
     def save_functions(self):
         """
@@ -223,6 +255,9 @@ class Plotter(QWidget):
         self.layout().addWidget(self.toolbar)
         self.layout().addWidget(self.canvas)
 
+    def clear_plots(self):
+        self.canvas.ax.cla()
+
 
 class PlotCanvas(FigureCanvas):
     """
@@ -230,33 +265,31 @@ class PlotCanvas(FigureCanvas):
     # TODO: Implement an optional legend that can be turned on or off
     """
     def __init__(self, parent=None, width=10, height=8, dpi=100):
-        fig = Figure(figsize=(width, height), dpi=dpi)
-        fig.add_gridspec(5, 5)
-        FigureCanvas.__init__(self, fig)
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.fig.add_gridspec(5, 5)
+        FigureCanvas.__init__(self, self.fig)
         self.setParent(parent)
         self.dataset_list = []
+        self.ax = self.fig.add_subplot(111)
         FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-    # TODO: Implement handling multiple plots on the same window
+    # TODO: Current implementation of multiple plots doesn't work exactly as expected, color updates but receives
+    # deprecation warning from matplotlib
     def plot(self, dataset):
         """
-        Plots data with label for legend
+        Plots data with label for future implemntation of legend
         """
         self.dataset_list.append(dataset)
         n = len(self.dataset_list)
-        axes_list =[]
         color = cm.rainbow(np.linspace(0,1,n))
 
+        # self.ax.plot(dataset.x_data, dataset.y_data)
+
         for idx, dataset in enumerate(self.dataset_list):
-            axes_list.append(self.figure.add_subplot(1, 1, 1))
+            self.ax.plot(dataset[idx].x_data, dataset[idx].y_data, c=color[idx],
+                    label=dataset[idx].name)
 
-        for idx, ax in enumerate(axes_list):
-            ax.plot(self.dataset_list[idx].x_data, self.dataset_list[idx].y_data, c=color[idx],
-                    label=self.dataset_list[idx].name)
-
-        # ax = self.figure.add_subplot(111)
-        # ax.plot(dataset.x_data, dataset.y_data, 'r-', linewidth=1, label=dataset.name)
         self.draw()
 
 if __name__ == "__main__":
