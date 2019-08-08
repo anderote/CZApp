@@ -2,6 +2,7 @@
     {
         "name": "Sine",
         "desc": "Sinusoidal Function",
+        "type" : "analytic",
         "raw": "A*sin(x*B)",
         "A": "1.0",
         "B": "2.0",
@@ -11,6 +12,7 @@
     {
         "name": "Exp",
         "desc": "Exponential Function",
+        "type" : "analytic",
         "raw": "A*e^(x*B)",
         "A": "1.0",
         "B": "2.0",
@@ -20,6 +22,7 @@
     {
         "name": "False",
         "desc": "False Function",
+        "type" : "analytic",
         "raw": "cat",
         "A": "1.0",
         "B": "2.0",
@@ -29,17 +32,24 @@
     {
         "name": "Unparameterized Function",
         "desc": "Missing parameters A and B",
+        "type" : "analytic",
         "raw": "A*x + B*x^2",
         "A_desc": "Amplitude",
         "B_desc": "Frequency"
     },
     {
         "name": "Undescribed function",
+        "type" : "analytic",
         "raw": "A*x + B*x^2",
         "A": "1.0",
         "B": "2.0"
     },
     {
-        "raw": "A*x + B*x^2"
+        "raw": "A*x + B*x^2",
+        "type" : "analytic"
+    },
+    {
+        "type" : "routine",
+        "methodFile" : ""
     }
 ]
