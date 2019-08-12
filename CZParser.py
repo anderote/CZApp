@@ -66,8 +66,9 @@ class Parser:
             if not self.checkFunction_params(element):
                 element.update({"A": "0.0", "B": "0.0"})
 
+            # TODO: This overwrites descriptions if some are missing, it should be more lenient to preseve partial descriptions
             if not self.checkFunction_desc(element):
-                element.update({"Note": "Incomplete function description"})
+                element.update({"A_desc": "", "B_desc" : "", "desc" : ""})
 
             if not remove_flag:
                 cleaned_functions.append(element)

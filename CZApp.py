@@ -13,6 +13,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 
 from CZParser import Parser
 from CZMathematics import Dataset
+from CZFunctions import DampedOscillator, UnstableOscillator
 
 """
 Priority list of implementation
@@ -25,7 +26,7 @@ Priority list of implementation
 -delete functions
 
 "function toolbar"
-- Modify, New, Delete
+- New, View, Modify, Delete
 "dataset toolbar"
 - Plot Selected (deletes existing plots), Clear Plots, Add to plot (adds to existing plot), Operation ( smoothing etc)
 """
@@ -42,12 +43,16 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
 
+        self.domain_list = []
+        self.current_domain = 0
+        self.domain_list_widget = QListWidget()
         self.function_list = []
         self.current_function_idx = 0
         self.function_list_widget = QListWidget()
         self.dataset_list = []
         self.current_dataset_idx = 0
         self.dataset_list_widget = QListWidget()
+
 
         self.statusBar().showMessage('Ready')
 
@@ -75,6 +80,7 @@ class MainWindow(QMainWindow):
         exit_button.setStatusTip('Exit application')
         exit_button.triggered.connect(self.close)
 
+        # Load and save functionality are part of the extended implementation and not part of core assignment
         load_button = QAction('Load Functions', self)
         load_button.setShortcut('Ctrl+L')
         load_button.setStatusTip('Load functions from a file')
@@ -116,16 +122,19 @@ class MainWindow(QMainWindow):
         clear_plots_button = QPushButton('Clear Plots', self)
         clear_plots_button.clicked.connect(self.clear_plots)
 
+        hlay3 = QHBoxLayout()
+        hlay3.addWidget(generate_button)
+        hlay3.addWidget(plotsel_button)
+        hlay3.addWidget(clear_plots_button)
+        hlay3.addItem(QSpacerItem(1000, 10, QSizePolicy.Expanding))
+        vlay.addLayout(hlay3)
+
         hlay2 = QHBoxLayout()
-        hlay2.addWidget(generate_button)
-        hlay2.addWidget(plotsel_button)
-        hlay2.addWidget(clear_plots_button)
-        hlay2.addItem(QSpacerItem(1000, 10, QSizePolicy.Expanding))
+        hlay2.addWidget(self.function_list_widget)
+        hlay2.addWidget(self.domain_list_widget)
         vlay.addLayout(hlay2)
 
         self.plotting_window = Plotter(self)
-        vlay.addWidget(self.function_list_widget)
-        vlay.addWidget(self.dataset_list_widget)
         vlay.addWidget(self.plotting_window)
 
         # Connect list widget functionality, where clicking once shows name of the function in status bar
