@@ -12,7 +12,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
 from CZParser import Parser
-from CZMathematics import Dataset
+from CZMathematics import Dataset, Domain
 from CZFunctions import DampedOscillator, UnstableOscillator
 
 """
@@ -43,24 +43,23 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
 
-        self.domain_list = []
-        self.current_domain = 0
+        # declare domains loaded by default
+        self.domain_list = [Domain(0, 100),
+                            Domain(50, 100, sampling='random'),
+                            Domain(0, 20, sampling='linear', numpoints=200)]
+        self.current_domain_idx = 0
         self.domain_list_widget = QListWidget()
-        self.function_list = []
+        # declare functions loaded by default
+        self.function_list = [DampedOscillator(), UnstableOscillator()]
         self.current_function_idx = 0
         self.function_list_widget = QListWidget()
         self.dataset_list = []
         self.current_dataset_idx = 0
         self.dataset_list_widget = QListWidget()
 
-
         self.statusBar().showMessage('Ready')
 
-        # questionable about putting domain here but it is workable for now
-        # potential improvement in making a list of domains for true generality
-        self.domain = np.arange(100)
-
-        #TODO: suppress matplotlib logging output
+        # TODO: suppress matplotlib logging output
         logging.basicConfig(level=logging.DEBUG,
                             format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                             datefmt='%m-%d %H:%M',
@@ -73,6 +72,13 @@ class MainWindow(QMainWindow):
         main_menu = self.menuBar()
         main_menu.setNativeMenuBar(False)
         file_menu = main_menu.addMenu('File')
+
+        # populate default functions and domains into the list
+        for func in self.function_list:
+            self.function_list_widget.addItem(func.get_name())
+
+        for dom in self.domain_list:
+            self.domain_list_widget.addItem(dom.get_name())
 
         # Definitions for menu bar at top of window
         exit_button = QAction(QIcon('exit24.png'), 'Exit', self)
@@ -101,7 +107,8 @@ class MainWindow(QMainWindow):
         file_menu.addAction(save_func_button)
         file_menu.addAction(save_data_button)
 
-        # Layout definitions for widgets
+        # Following lays out the UI from the "top down" and "left to right" for vertical and horizontal layouts
+        # respectively.
         widget = QWidget(self)
         self.setCentralWidget(widget)
 
@@ -111,28 +118,38 @@ class MainWindow(QMainWindow):
 
         hlay.addItem(QSpacerItem(1000, 10, QSizePolicy.Expanding))
 
-        # buttons for manipulating the function plotting settings
-
-        plotsel_button = QPushButton('Plot Selected', self)
-        plotsel_button.clicked.connect(self.plot_selected_dataset)
-
+        # buttons for manipulating, viewing functions and datasets
         generate_button = QPushButton('Generate', self)
         generate_button.clicked.connect(self.generate_data)
+        new_domain_button = QPushButton('New Domain', self)
+        new_domain_button.clicked.connect(self.new_domain)
 
-        clear_plots_button = QPushButton('Clear Plots', self)
-        clear_plots_button.clicked.connect(self.clear_plots)
+        hlay1 = QHBoxLayout()
+        hlay1.addWidget(generate_button)
+        hlay1.addWidget(new_domain_button)
+        hlay1.addItem(QSpacerItem(1000, 10, QSizePolicy.Expanding))
+        vlay.addLayout(hlay1)
 
-        hlay3 = QHBoxLayout()
-        hlay3.addWidget(generate_button)
-        hlay3.addWidget(plotsel_button)
-        hlay3.addWidget(clear_plots_button)
-        hlay3.addItem(QSpacerItem(1000, 10, QSizePolicy.Expanding))
-        vlay.addLayout(hlay3)
-
+        # create list views of functions next to domains, with datasets underneath.
         hlay2 = QHBoxLayout()
         hlay2.addWidget(self.function_list_widget)
         hlay2.addWidget(self.domain_list_widget)
         vlay.addLayout(hlay2)
+
+        hlay3 = QHBoxLayout()
+        hlay3.addWidget(self.dataset_list_widget)
+        vlay.addLayout(hlay3)
+
+        # buttons for plotting selected datasets and clearing plot window
+        plotsel_button = QPushButton('Plot Selected Dataset', self)
+        plotsel_button.clicked.connect(self.plot_selected_dataset)
+        clear_plots_button = QPushButton('Clear Plotting Window', self)
+        clear_plots_button.clicked.connect(self.clear_plots)
+
+        hlay4 = QHBoxLayout()
+        hlay4.addWidget(plotsel_button)
+        hlay4.addWidget(clear_plots_button)
+        vlay.addLayout(hlay4)
 
         self.plotting_window = Plotter(self)
         vlay.addWidget(self.plotting_window)
@@ -141,7 +158,73 @@ class MainWindow(QMainWindow):
         # and clicking twice plots the function over a range specified by input domain
 
         self.function_list_widget.itemClicked.connect(self.function_clicked)
-        #self.function_list_widget.itemDoubleClicked.connect(self.listItemDoubleClicked)
+        self.domain_list_widget.itemClicked.connect(self.domain_clicked)
+        self.dataset_list_widget.itemClicked.connect(self.dataset_clicked)
+
+    def function_clicked(self):
+        """
+        Selects the function for generating datasets and displays function information in the status bar
+        """
+        self.current_function_idx = self.function_list_widget.currentRow()
+        function = self.function_list[self.current_function_idx]
+        display_message = function.get_name() + ", " + function.get_description("desc")
+        self.statusBar().showMessage(display_message)
+
+    def domain_clicked(self):
+        """
+        Selects the domain for generating datasets and displays domain information in the status bar
+        """
+
+        self.current_domain_idx = self.domain_list_widget.currentRow()
+        domain = self.domain_list[self.current_domain_idx]
+        display_message = domain.get_name() + ", generated at " + str(domain.timestamp)
+        self.statusBar().showMessage(display_message)
+
+    def dataset_clicked(self):
+        """
+        Selects dataset for plotting and displays dataset informaiton in the status bar
+
+        """
+        self.current_dataset_idx = self.dataset_list_widget.currentRow()
+        dataset = self.dataset_list[self.current_dataset_idx]
+        display_message = "Dataset " + dataset.get_name() + " generated at " + str(dataset.timestamp)
+        self.statusBar().showMessage(display_message)
+
+    def generate_data(self):
+        """
+        Applies the current function to the current domain and adds a dataset object to the list of datasets
+        """
+        try:
+            fun = self.function_list[self.current_function_idx]
+            data = fun.evaluate(self.domain_list[self.current_domain_idx])
+            data_name = (fun.get_name() + '_' + str(np.min(self.domain)) +
+                         '_to_' + str(np.max(self.domain)))
+            dataset = Dataset(data_name, self.domain, data)
+            self.statusBar().showMessage("Generated dataset " + data_name + " at " + str(dataset.timestamp))
+            self.dataset_list.append(dataset)
+            self.dataset_list_widget.addItem(data_name)
+        except:
+            self.statusBar().showMessage("No functions or domain selected to generate data")
+            logging.error("Attempted to generate data with no functions or data selected")
+
+    def new_domain(self):
+        pass
+
+    def plot_selected_dataset(self):
+        try:
+            dataset = self.dataset_list[self.current_dataset_idx]
+            self.plotting_window.canvas.plot(dataset)
+        except:
+            self.statusBar().showMessage("No dataset selected to plot")
+            logging.error("Attempted to plot data with no dataset selected")
+
+
+    def clear_plots(self):
+        """
+        Resets the Plotter
+        :return:
+        """
+        self.plotting_window.clear_plots()
 
     def load_functions(self):
         """
@@ -160,82 +243,6 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Loaded functions from " + file_name)
         except:
             self.statusBar().showMessage("Failed to load functions or invalid path specified")
-
-    def function_clicked(self):
-        """
-        Selects the function for generating datasets and displays function information in the status bar
-        """
-
-        self.current_function_idx = self.function_list_widget.currentRow()
-        current_fun = self.function_list[self.current_function_idx]
-        display_message = current_fun.get_name()
-        self.statusBar().showMessage(display_message)
-        #
-        # if "A_desc" in current_fun.keys():
-        #     display_message = display_message + ", A =" + current_fun.get_description("A")
-        # if "B_desc" in current_fun.keys():
-        #     display_message = display_message + ", B =" + current_fun.get_description("B")
-        #
-        # self.statusBar().showMessage(display_message)
-
-    def generate_data(self):
-        """
-        Applies the current function to the current domain and adds a dataset object to the list of datasets
-        """
-        try:
-            fun = self.function_list[self.current_function_idx]
-            data = fun.evaluate(self.domain)
-            data_name = (fun.get_name() + '_' + str(np.min(self.domain)) +
-                         '_to_' + str(np.max(self.domain)))
-            dataset = Dataset(data_name, self.domain, data)
-            self.statusBar().showMessage("Generated dataset " + data_name + " at " + str(dataset.timestamp))
-            self.dataset_list.append(dataset)
-            self.dataset_list_widget.addItem(data_name)
-        except:
-            self.statusBar().showMessage("No functions or domain selected to generate data")
-            logging.error("Attempted to generate data with no functions or data selected")
-
-
-    def dataset_clicked(self):
-        self.current_dataset_idx = self.dataset_list_widget.currentRow()
-        dataset = self.dataset_list[self.current_dataset_idx]
-        self.statusBar().showMess
-        # self.statusBar().showMessage("Dataset " + dataset.name + " generated at " + str(dataset.timestamp))
-
-    def plot_selected_dataset(self):
-        try:
-            dataset = self.dataset_list[self.current_dataset_idx]
-            self.plotting_window.canvas.plot(dataset)
-        except:
-            self.statusBar().showMessage("No dataset selected to plot")
-            logging.error("Attempted to plot data with no dataset selected")
-
-
-
-    def listItemDoubleClicked(self):
-        """
-        Evaluates the current function at the current domain and displays results in the plotting window
-        :param item: function definition which was just double-clicked
-        """
-        '''
-        self.current_function_idx = self.function_list_widget.currentRow()
-        current_fun = self.function_list(self.current_function_idx)
-
-        try:
-            y_vals = current_fun(np.arange(100))
-        except:
-            logging.error("Failed to evaluate function")
-        self.plotting_window.canvas.plot(np.sin(y_vals), "Blank")
-
-        # self.plotting_window.canvas.plot(y_vals, "Blank")  # self.parser.functions[self.current_function_idx]["name"])
-        '''
-
-    def clear_plots(self):
-        """
-        Resets the Plotter
-        :return:
-        """
-        self.plotting_window.clear_plots()
 
     def save_functions(self):
         """

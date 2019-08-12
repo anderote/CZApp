@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from time import time
+from datetime import datetime
 import numpy as np
 
 
@@ -115,12 +115,15 @@ class Dataset():
     equivalency between sizes of x and y values.
     """
     def __init__(self, name, x_val, y_val):
-        self.timestamp = time()
+        self.timestamp = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
         self.name = name
         self.x_data = x_val
         self.y_data = y_val
         if len(x_val) != len(y_val):
             raise Exception('Datasets must contain equal numbers of x and y values!')
+
+    def get_name(self):
+        return self.name()
 
 
 class Domain():
@@ -131,10 +134,12 @@ class Domain():
     TODO: Write tests for sample and resample
     """
     def __init__(self, start, stop, numpoints=100, sampling='linear'):
+        self.timestamp = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
         self.start = start
         self.stop = stop
         self.n = numpoints
         self.sampling = sampling
+        self.name = sampling + "_" + str(start) + "_to_" + str(stop) + "_" + str(numpoints) + "pts"
         self.values = self.sample()
 
     def sample(self):
@@ -156,5 +161,8 @@ class Domain():
         """
         self.sampling = sampling
         self.values = self.sample()
+
+    def get_name(self):
+        return self.name
 
 
