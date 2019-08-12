@@ -123,7 +123,7 @@ class Dataset():
             raise Exception('Datasets must contain equal numbers of x and y values!')
 
     def get_name(self):
-        return self.name()
+        return self.name
 
 
 class Domain():
@@ -152,7 +152,7 @@ class Domain():
             return np.arange(self.start, self.stop, step)
 
         if self.sampling == 'random':
-            return np.random.uniform(self.start, self.stop, self.n)
+            return np.sort(np.random.uniform(self.start, self.stop, self.n))
 
     def resample(self, sampling):
         """

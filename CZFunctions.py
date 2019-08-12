@@ -7,16 +7,16 @@ class DampedOscillator(TwoParameterFunction):
 
     'A' represents the initial amplitude and 'B' represents the exponential decay time constant
     """
-    def __init__(self, A=10, B=0.1):
+    def __init__(self, A=10, B=2):
         super().__init__(A, B)
-        self.name = "Damped Oscillator"
+        self.name = "Damped_Oscillator"
         self.description = "Represents the behavior of an exponentially decaying sinusoid"
         self.raw = "A*e^(-x/B)"
-        self.A_desc = "Initial amplitude"
+        self.A_desc = "Initial Amplitude"
         self.B_desc = "Decay constant"
 
     def evaluate(self, xvals):
-        return self._A * np.exp((-xvals) / self._B)
+        return self._A * np.sin(xvals * (2*np.pi)) * np.exp((-xvals) / self._B)
 
 
 class UnstableOscillator(TwoParameterFunction):
@@ -25,16 +25,16 @@ class UnstableOscillator(TwoParameterFunction):
 
     'A' represents the initial amplitude and 'B' represents the exponential growth time constant
     """
-    def __init__(self, A=10, B=0.1):
+    def __init__(self, A=10, B=2):
         super().__init__(A, B)
-        self.name = "Unstable Oscillator"
+        self.name = "Unstable_Oscillator"
         self.description = "Represents the behavior of an exponentially growing sinusoid"
         self.raw = "A*e^(x/B)"
         self.A_desc = "Initial amplitude"
         self.B_desc = "Growth constant"
 
     def evaluate(self, xvals):
-        return self._A * np.exp(xvals / self._B)
+        return self._A *np.sin(xvals * (2*np.pi))* np.exp(xvals / self._B)
 
 
 class Pyramid(TwoParameterFunction):
@@ -46,7 +46,7 @@ class Pyramid(TwoParameterFunction):
 
     def __init__(self, A=10, B=10):
         super().__init__()
-        self.name = "Pyramid Routine"
+        self.name = "Pyramid_Routine"
         self.description = "Draws a pyramid shape on the plot"
         self.raw = "Pyramid shape"
         self.A_desc = "Pyramid height"
