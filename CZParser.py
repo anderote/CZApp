@@ -282,7 +282,4 @@ class ParserTest(TestCase):
          self.assertEqual(True, self.Parser.checkFunction_params(param_fun))
 
 
-    def test_returnFunction(self):
-        pass
-
 

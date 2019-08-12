@@ -284,10 +284,13 @@ class MainWindow(QMainWindow):
             float(stop)
             int(npoints)
             str(sampling)
-        except:
+        except InvalidParameter:
             self.statusBar().showMessage("Invalid domain parameters specified, start and stop may be any number" +
                                          " but numpoints must be integer")
             logging.error("Attempted to generate domain with invalid parameters")
+        except :
+            self.statusBar().showMessage("Failed to modify function")
+            logging.error("Failed to modify function")
         else:
             new_domain = Domain(float(start), float(stop), int(npoints), sampling)
             self.domain_list.append(new_domain)
