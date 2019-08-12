@@ -1,30 +1,17 @@
 import sys, os, logging
-import numpy as np
 from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QAction, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-                             QSpacerItem, QSizePolicy, QPushButton, QFileDialog, QSlider, QListWidget)
+                             QSpacerItem, QSizePolicy, QPushButton, QFileDialog, QDialog, QListWidget, QGridLayout, QComboBox)
 
 from PyQt5.QtGui import QIcon
 
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from matplotlib.pylab import cm
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
 from CZParser import Parser
-from CZMathematics import Dataset, Domain
-from CZFunctions import DampedOscillator, UnstableOscillator
+from CZMathematics import Dataset, Domain, DampedOscillator, UnstableOscillator, Pyramid
 
 """
-Priority list of implementation
-- enable clearing of plots
--setting / changing domains
--saving domains as part of dataset names
--display more information on function click
--edit existing functions in the list
--add new functions
--delete functions
-
 "function toolbar"
 - New, View, Modify, Delete
 "dataset toolbar"
@@ -32,6 +19,15 @@ Priority list of implementation
 """
 
 class MainWindow(QMainWindow):
+    """
+    Main GUI Window that handles all events and user actions. Consists of 4 main windows:
+        Function list
+        Domain list
+        Dataset list
+        Plotting window
+
+    In addition to two menu button toolbars that enable modifying functions, generating domains, plotting.
+    """
     def __init__(self):
         QMainWindow.__init__(self)
 
@@ -44,8 +40,8 @@ class MainWindow(QMainWindow):
         self.setGeometry(self.left, self.top, self.width, self.height)
 
         # declare domains loaded by default
-        self.domain_list = [Domain(0, 100),
-                            Domain(50, 100, sampling='random'),
+        self.domain_list = [Domain(0, 10),
+                            Domain(10, 20, sampling='random'),
                             Domain(0, 20, sampling='linear', numpoints=200)]
         self.current_domain_idx = 0
         self.domain_list_widget = QListWidget()
@@ -173,7 +169,11 @@ class MainWindow(QMainWindow):
         """
         self.current_function_idx = self.function_list_widget.currentRow()
         function = self.function_list[self.current_function_idx]
-        display_message = function.get_name() + ", " + function.get_description("desc")
+        display_message = (function.get_name() + ", " + function.get_description("desc") + ", " +
+                           function.get_description("A_desc") + " = " + str(function.get_A_value()) + ", " +
+                           function.get_description("B_desc") + " = " + str(function.get_B_value())
+                           )
+
         self.statusBar().showMessage(display_message)
 
     def domain_clicked(self):
@@ -188,8 +188,7 @@ class MainWindow(QMainWindow):
 
     def dataset_clicked(self):
         """
-        Selects dataset for plotting and displays dataset informaiton in the status bar
-
+        Selects dataset for plotting and displays dataset information in the status bar
         """
         self.current_dataset_idx = self.dataset_list_widget.currentRow()
         dataset = self.dataset_list[self.current_dataset_idx]
@@ -214,10 +213,26 @@ class MainWindow(QMainWindow):
             logging.error("Attempted to generate data with no functions or data selected")
 
     def new_domain(self):
-        pass
+        newdom = NewDomain(self)
+        newdom.exec_()
 
     def modify_function(self):
-        pass
+        modfun = ModFunction(self)
+        modfun.exec_()
+        new_A = modfun.get_Aparam()
+        new_B = modfun.get_Bparam()
+
+        # Ensure the user cannot enter invalid function parameters
+        try:
+            float(new_A)
+            float(new_B)
+        except:
+            self.statusBar().showMessage("Invalid parameters assigned to function, defaulting to previous values")
+            logging.error("Attempted to assign non-numeric values to function parameters")
+        else:
+            self.function_list[self.current_function_idx].set_A_value(new_A)
+            self.function_list[self.current_function_idx].set_B_value(new_B)
+
 
     def plot_selected_dataset(self):
         try:
@@ -265,11 +280,107 @@ class MainWindow(QMainWindow):
         """
 
 
+class ModFunction(QDialog):
+    """
+    Enables users to modify an existing function by replacing parameter values A and B
+    """
+    def __init__(self, parent=None):
+        super(ModFunction, self).__init__(parent)
+
+        function = parent.function_list[parent.current_function_idx]
+
+        layout = QGridLayout(self)
+        layout.setSpacing(20)
+
+        self.Aparam = QLabel()
+        Aedit = QLineEdit()
+        Aedit.textChanged.connect(self.Aparam_changed)
+
+        self.Bparam = QLabel()
+        Bedit = QLineEdit()
+        Bedit.textChanged.connect(self.Bparam_changed)
+
+        apply_button = QPushButton('Apply', self)
+        apply_button.clicked.connect(self.close)
+
+        layout.addWidget(QLabel(function.get_description("A_desc")), 1, 0)
+        layout.addWidget(Aedit, 1, 1)
+        layout.addWidget(QLabel(function.get_description("B_desc")), 2, 0)
+        layout.addWidget(Bedit, 2, 1)
+        layout.addWidget(apply_button, 3, 2)
+
+    def Aparam_changed(self, value):
+        self.Aparam.setText(value)
+
+    def Bparam_changed(self, value):
+        self.Bparam.setText(value)
+
+    def get_Aparam(self):
+        return self.Aparam.text()
+
+    def get_Bparam(self):
+        return self.Bparam.text()
+
+
+class NewDomain(QDialog):
+    """
+    Enables users to generate new domains on which to evaluate functions
+    """
+    def __init__(self, parent=None):
+        super(NewDomain, self).__init__(parent)
+
+        layout = QGridLayout(self)
+        layout.setSpacing(10)
+
+        self.start = QLabel()
+        start_edit = QLineEdit()
+        start_edit.textChanged.connect(self.start_changed)
+
+        self.stop = QLabel()
+        stop_edit = QLineEdit()
+        stop_edit.textChanged.connect(self.stop_changed)
+
+        self.npoints = QLabel()
+        npoints_edit = QLineEdit()
+        npoints_edit.textChanged.connect(self.npoints_changed)
+
+        self.sampling = QComboBox()
+        self.sampling.addItems(["Evenly Spaced", "Uniform Random"])
+
+        apply_button = QPushButton('Apply', self)
+        apply_button.clicked.connect(self.close)
+
+        layout.addWidget(QLabel("Start value"), 1, 0)
+        layout.addWidget(start_edit, 1, 1)
+        layout.addWidget(QLabel("Stop value"), 2, 0)
+        layout.addWidget(stop_edit, 2, 1)
+        layout.addWidget(QLabel("Number of points"), 3, 0)
+        layout.addWidget(npoints_edit, 3, 1)
+        layout.addWidget(QLabel("Sampling method"), 4, 0)
+        layout.addWidget(self.sampling, 4, 1)
+        layout.addWidget(apply_button, 5, 2)
+
+    def start_changed(self, value):
+        self.start.setText(value)
+
+    def stop_changed(self, value):
+        self.stop.setText(value)
+
+    def npoints_changed(self):
+        self.npoints.text()
+
+    def return_info(self):
+        if self.sampling.currentIndex() == 0:
+            sampling = "linear"
+        else:
+            sampling = "random"
+        return [self.start, self.stop, self.npoints, sampling]
+
+
 class Plotter(QWidget):
     """
-    Also provides matplotlib built-in toolbar for panning, viewing, saving views, etc.
+    Provides matplotlib built-in toolbar for panning, viewing, saving views, functionality.
 
-    #TODO: Implement clearing, saving, loading plots.
     """
     def __init__(self, *args, **kwargs):
         QWidget.__init__(self, *args, **kwargs)

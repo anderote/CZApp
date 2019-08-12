@@ -10,7 +10,7 @@
         "B_desc": "Frequency"
     },
     {
-        "name": "Exp",
+        "name": "Exponential_Growth",
         "desc": "Exponential Function",
         "type" : "analytic",
         "raw": "A*e^(x*B)",
@@ -21,7 +21,7 @@
     },
     {
         "name": "False",
-        "desc": "False Function",
+        "desc": "Function that wont be imported because it has non-evaluatable text",
         "type" : "analytic",
         "raw": "cat",
         "A": "1.0",
@@ -30,7 +30,7 @@
         "B_desc": "Frequency"
     },
     {
-        "name": "Unparameterized Function",
+        "name": "Unparamaterized_Function",
         "desc": "Missing parameters A and B",
         "type" : "analytic",
         "raw": "A*sin(x)*e^(B*x)",
@@ -38,18 +38,13 @@
         "B_desc": "Frequency"
     },
     {
-        "name": "Undescribed function",
+        "name": "Quadratic_Polynomial",
+        "desc" : "Second order polynomial",
         "type" : "analytic",
-        "raw": "A*x - B*x^0.5",
+        "raw": "A*x^2 + B*x",
+        "A_desc": "Coefficient of x^2",
+        "B_desc" : "Coefficient of x",
         "A": "1.0",
         "B": "2.0"
     },
-    {
-        "raw": "A*x + B*x^2",
-        "type" : "analytic"
-    },
-    {
-        "type" : "routine",
-        "methodFile" : ""
-    }
 ]
