@@ -309,12 +309,9 @@ class MainWindow(QMainWindow):
         try:
             float(new_A)
             float(new_B)
-        except InvalidParameter:
+        except :
             self.statusBar().showMessage("Invalid parameters assigned to function, defaulting to previous values")
             logging.error("Attempted to assign non-numeric values to function parameters")
-        except :
-            self.statusBar().showMessage("Failed to modify function")
-            logging.error("Function could not be modified for unknown reasons")
         else:
             self.function_list[self.current_function_idx].set_A_value(new_A)
             self.function_list[self.current_function_idx].set_B_value(new_B)
@@ -397,19 +394,21 @@ class ModFunction(QDialog):
         super(ModFunction, self).__init__(parent)
 
         function = parent.function_list[parent.current_function_idx]
-
+        self.setWindowTitle("Modify existing function")
         layout = QGridLayout(self)
         layout.setSpacing(20)
 
         self.Aparam = QLabel()
         Aedit = QLineEdit()
-        Aedit.setText(str(function.get_A_value()))
         Aedit.textChanged.connect(self.Aparam_changed)
 
         self.Bparam = QLabel()
         Bedit = QLineEdit()
-        Bedit.setText(str(function.get_B_value()))
         Bedit.textChanged.connect(self.Bparam_changed)
+
+        # TODO: Show previous parameter values in dialog box
+        # Aedit.setText(str(function.get_A_value()))
+        # Bedit.setText(str(function.get_B_value()))
 
         apply_button = QPushButton('Apply', self)
         apply_button.clicked.connect(self.close)
@@ -445,6 +444,7 @@ class NewDomain(QDialog):
     def __init__(self, parent=None):
         super(NewDomain, self).__init__(parent)
 
+        self.setWindowTitle("Create a new domain")
         layout = QGridLayout(self)
         layout.setSpacing(10)
 
@@ -530,8 +530,9 @@ class PlotCanvas(FigureCanvas):
         Plots data with label for future implementation of legend
         """
         self.dataset_plotting_list.append(dataset)
-        self.ax.plot(dataset.x_data, dataset.y_data, label=dataset.get_name())
-        self.ax.legend(loc ='lower right')
+        self.ax.plot(dataset.get_xvals(), dataset.get_yvals(), label=dataset.get_name())
+        if len(self.dataset_plotting_list) >= 2:
+            self.ax.legend(loc ='lower right')
         self.ax.grid()
         self.draw()
 

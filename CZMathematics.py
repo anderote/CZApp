@@ -173,13 +173,19 @@ class Dataset:
     def __init__(self, name, x_val, y_val):
         self.timestamp = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
         self.name = name
-        self.x_data = x_val
-        self.y_data = y_val
+        self._xvals = x_val
+        self._yvals = y_val
         if len(x_val) != len(y_val):
             raise Exception('Datasets must contain equal numbers of x and y values!')
 
     def get_name(self):
         return self.name
+
+    def get_xvals(self):
+        return self._xvals
+
+    def get_yvals(self):
+        return self._yvals
 
 
 class Domain:
@@ -187,7 +193,6 @@ class Domain:
     X-values which are fed to a function as an argument. Domains support multiple samplings between start and
     stop values for a desired number of points.
 
-    TODO: Write tests for sample and resample
     """
     def __init__(self, start, stop, numpoints=100, sampling='linear'):
         self.timestamp = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
