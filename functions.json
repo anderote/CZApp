@@ -2,7 +2,7 @@
     {
         "name": "Sine",
         "desc": "Sinusoidal Function",
-        "type" : "analytic",
+        "type": "analytic",
         "raw": "A*sin(x*B)",
         "A": "1.0",
         "B": "2.0",
@@ -12,7 +12,7 @@
     {
         "name": "Exponential_Growth",
         "desc": "Exponential Function",
-        "type" : "analytic",
+        "type": "analytic",
         "raw": "A*e^(x*B)",
         "A": "1.0",
         "B": "2.0",
@@ -22,7 +22,7 @@
     {
         "name": "False",
         "desc": "Function that wont be imported because it has non-evaluatable text",
-        "type" : "analytic",
+        "type": "analytic",
         "raw": "cat",
         "A": "1.0",
         "B": "2.0",
@@ -32,19 +32,24 @@
     {
         "name": "Unparamaterized_Function",
         "desc": "Missing parameters A and B",
-        "type" : "analytic",
+        "type": "analytic",
         "raw": "A*sin(x)*e^(B*x)",
         "A_desc": "Amplitude",
         "B_desc": "Frequency"
     },
     {
         "name": "Quadratic_Polynomial",
-        "desc" : "Second order polynomial",
-        "type" : "analytic",
+        "desc": "Second order polynomial",
+        "type": "analytic",
         "raw": "A*x^2 + B*x",
         "A_desc": "Coefficient of x^2",
-        "B_desc" : "Coefficient of x",
+        "B_desc": "Coefficient of x",
         "A": "1.0",
         "B": "2.0"
     },
+    {
+        "name": "Undescribed function",
+        "type": "analytic",
+        "raw": "A*x^2 + B*x"
+    }
 ]

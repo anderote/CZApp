@@ -11,22 +11,21 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 from CZParser import Parser
 from CZMathematics import Dataset, Domain, DampedOscillator, UnstableOscillator, Pyramid
 
-"""
-"function toolbar"
-- New, View, Modify, Delete
-"dataset toolbar"
-- Plot Selected (deletes existing plots), Clear Plots, Add to plot (adds to existing plot), Operation ( smoothing etc)
-"""
 
 class MainWindow(QMainWindow):
     """
     Main GUI Window that handles all events and user actions. Consists of 4 main windows:
-        Function list
-        Domain list
-        Dataset list
-        Plotting window
+        Function list     |    Domain list
+                    Dataset list
+                    Plotting window
 
     In addition to two menu button toolbars that enable modifying functions, generating domains, plotting.
+
+    uiSetup defines all the GUI layout and connects user input actions with function calls via ".connect" statements.
+
+    StatusBar messages are generated whenever a user successfuly performs an action, i.e. generating a new dataset or
+    new domain. Additionally messages are displayed if an action fails, i.e. invalid parameters are entered to modify a functions.
+    Hovering the mouse over a button will display a tooltip for that buttons action and consequences.
     """
     def __init__(self):
         QMainWindow.__init__(self)
@@ -106,8 +105,9 @@ class MainWindow(QMainWindow):
         file_menu.addAction(save_func_button)
         file_menu.addAction(save_data_button)
 
-        # Following lays out the UI from the "top down" and "left to right" for vertical and horizontal layouts
-        # respectively.
+        # The following lays out the UI from the "top down" and "left to right" for vertical and horizontal layouts
+        # respectively. PyQt5 uses a 'signal and socket' representation such that each button generates a signal
+        # which activates a socket, which is the handle of a function within this class.
         widget = QWidget(self)
         self.setCentralWidget(widget)
 
@@ -117,18 +117,30 @@ class MainWindow(QMainWindow):
 
         hlay.addItem(QSpacerItem(1000, 10, QSizePolicy.Expanding))
 
-        # buttons for manipulating, viewing functions and datasets
-        generate_button = QPushButton('Generate Dataset', self)
-        generate_button.clicked.connect(self.generate_data)
+        # buttons for manipulating functions and domains
+        loadfunc_button = QPushButton('Load Functions')
+        loadfunc_button.setToolTip('Loads previously defined functions from a user-specified JSON file')
+        loadfunc_button.clicked.connect(self.load_functions)
+
         modfunc_button = QPushButton('Modify Function', self)
+        modfunc_button.setToolTip("Opens a dialog window to modify parameters of the currently"
+                                  "selected function")
         modfunc_button.clicked.connect(self.modify_function)
+
         new_domain_button = QPushButton('New Domain', self)
+        new_domain_button.setToolTip("Opens a dialog window to create new domains with specified start, stop, number"
+                                     "of points and sampling method")
         new_domain_button.clicked.connect(self.new_domain)
 
+        clear_domain_button = QPushButton('Clear Domains', self)
+        clear_domain_button.setToolTip("Clears all domains. Warning: This action cannot be undone")
+        clear_domain_button.clicked.connect(self.clear_domains)
+
         hlay1 = QHBoxLayout()
+        hlay1.addWidget(loadfunc_button)
         hlay1.addWidget(modfunc_button)
-        hlay1.addWidget(generate_button)
         hlay1.addWidget(new_domain_button)
+        hlay1.addWidget(clear_domain_button)
         hlay1.addItem(QSpacerItem(1000, 10, QSizePolicy.Expanding))
         vlay.addLayout(hlay1)
 
@@ -138,19 +150,33 @@ class MainWindow(QMainWindow):
         hlay2.addWidget(self.domain_list_widget)
         vlay.addLayout(hlay2)
 
+        generate_button = QPushButton('Generate Dataset', self)
+        generate_button.setToolTip("Applies the currently selected function to the "
+                                   "currently selected domain to generate a new dataset")
+        generate_button.clicked.connect(self.generate_data)
+        hlay21 = QHBoxLayout()
+        hlay21.addWidget(generate_button)
+        vlay.addLayout(hlay21)
+
         hlay3 = QHBoxLayout()
         hlay3.addWidget(self.dataset_list_widget)
         vlay.addLayout(hlay3)
 
         # buttons for plotting selected datasets and clearing plot window
         plotsel_button = QPushButton('Plot Selected Dataset', self)
+        plotsel_button.setToolTip("Adds the selected dataset to the current plotting window")
         plotsel_button.clicked.connect(self.plot_selected_dataset)
         clear_plots_button = QPushButton('Clear Plotting Window', self)
+        clear_plots_button.setToolTip("Clears all plots from the plotting window.")
         clear_plots_button.clicked.connect(self.clear_plots)
+        clear_datasets_button = QPushButton('Clear Datasets', self)
+        clear_datasets_button.setToolTip("Clears all datasets. Warning: This action cannot be undone")
+        clear_datasets_button.clicked.connect(self.clear_datasets)
 
         hlay4 = QHBoxLayout()
         hlay4.addWidget(plotsel_button)
         hlay4.addWidget(clear_plots_button)
+        hlay4.addWidget(clear_datasets_button)
         vlay.addLayout(hlay4)
 
         self.plotting_window = Plotter(self)
@@ -215,6 +241,21 @@ class MainWindow(QMainWindow):
     def new_domain(self):
         newdom = NewDomain(self)
         newdom.exec_()
+        [start, stop, npoints, sampling] = newdom.return_info()
+        try:
+            float(start)
+            float(stop)
+            int(npoints)
+            str(sampling)
+        except:
+            self.statusBar().showMessage("Invalid domain parameters specified, start and stop may be any number" +
+                                         " but numpoints must be integer")
+            logging.error("Attempted to generate domain with invalid parameters")
+        else:
+            new_domain = Domain(float(start), float(stop), int(npoints), sampling)
+            self.domain_list.append(new_domain)
+            self.domain_list_widget.addItem(new_domain.get_name())
+            self.statusBar().showMessage("Created domain " + new_domain.get_name() + " at " + new_domain.timestamp)
 
     def modify_function(self):
         modfun = ModFunction(self)
@@ -233,7 +274,6 @@ class MainWindow(QMainWindow):
             self.function_list[self.current_function_idx].set_A_value(new_A)
             self.function_list[self.current_function_idx].set_B_value(new_B)
 
-
     def plot_selected_dataset(self):
         try:
             dataset = self.dataset_list[self.current_dataset_idx]
@@ -242,13 +282,20 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("No dataset selected to plot")
             logging.error("Attempted to plot data with no dataset selected")
 
-
     def clear_plots(self):
         """
         Resets the Plotter
         :return:
         """
         self.plotting_window.clear_plots()
+
+    def clear_datasets(self):
+        self.dataset_list_widget.clear()
+        self.dataset_list.clear()
+
+    def clear_domains(self):
+        self.domain_list_widget.clear()
+        self.domain_list.clear()
 
     def load_functions(self):
         """
@@ -272,17 +319,23 @@ class MainWindow(QMainWindow):
         Saves the current list of functions to the to a .json file in the cwd, with user prompt for name entry
 
         """
+        self.statusBar().showMessage("Saving functions is not yet supported")
 
     def save_datasets(self):
         """
         Saves the current list of datasets to a .json file in the cwd, with user prompt for name entry
         :return:
         """
+        self.statusBar().showMessage("Saving datasets is not yet supported")
 
 
 class ModFunction(QDialog):
     """
-    Enables users to modify an existing function by replacing parameter values A and B
+    Prompts users to modify the previously selected function by replacing parameter values A and B
+
+    Takes description text from currently highlighted function in main window
+
+    If Dialog box does not receive valid input for parameters then it will default to previously stored parameters
     """
     def __init__(self, parent=None):
         super(ModFunction, self).__init__(parent)
@@ -324,7 +377,8 @@ class ModFunction(QDialog):
 
 class NewDomain(QDialog):
     """
-    Enables users to generate new domains on which to evaluate functions
+    Prompts users with a dialog box to generate new domains by specifying a start, stop, number of points and
+    sampling method.
     """
     def __init__(self, parent=None):
         super(NewDomain, self).__init__(parent)
@@ -366,15 +420,15 @@ class NewDomain(QDialog):
     def stop_changed(self, value):
         self.stop.setText(value)
 
-    def npoints_changed(self):
-        self.npoints.text()
+    def npoints_changed(self, value):
+        self.npoints.setText(value)
 
     def return_info(self):
         if self.sampling.currentIndex() == 0:
             sampling = "linear"
         else:
             sampling = "random"
-        return [self.start, self.stop, self.npoints, sampling]
+        return [self.start.text(), self.stop.text(), self.npoints.text(), sampling]
 
 
 class Plotter(QWidget):
@@ -417,6 +471,8 @@ class PlotCanvas(FigureCanvas):
         self.dataset_plotting_list.append(dataset)
         self.ax.plot(dataset.x_data, dataset.y_data, label=dataset.get_name())
         # TODO: implement legend
+        self.ax.legend(loc ='lower right')
+        self.ax.grid()
         self.draw()
 
 if __name__ == "__main__":

@@ -113,7 +113,7 @@ class DampedOscillator(TwoParameterFunction):
 
     'A' represents the initial amplitude and 'B' represents the exponential decay time constant
     """
-    def __init__(self, A=10, B=2):
+    def __init__(self, A=10.0, B=2.0):
         super().__init__(A, B)
         self.name = "Damped_Oscillator"
         self.description = "Represents the behavior of an exponentially decaying sinusoid"
@@ -131,7 +131,7 @@ class UnstableOscillator(TwoParameterFunction):
 
     'A' represents the initial amplitude and 'B' represents the exponential growth time constant
     """
-    def __init__(self, A=10, B=2):
+    def __init__(self, A=10.0, B=0.2):
         super().__init__(A, B)
         self.name = "Unstable_Oscillator"
         self.description = "Represents the behavior of an exponentially growing sinusoid"
@@ -168,6 +168,9 @@ class Dataset:
 
     This class gaurantees that all data generated can be used to produce matplotlib, which demands
     equivalency between sizes of x and y values.
+
+    Provides scaffold  for future extensibility for dataset operations, e.g. fourier transforms, smoothing,
+    peak detection, etc
     """
     def __init__(self, name, x_val, y_val):
         self.timestamp = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
@@ -203,8 +206,7 @@ class Domain:
         :return: set of x-vales chosen according to sampling method, start, stop, and number of points
         """
         if self.sampling == 'linear':
-            step = (self.stop - self.start)/self.n
-            return np.arange(self.start, self.stop, step)
+            return np.linspace(self.start, self.stop, num=self.n)
 
         if self.sampling == 'random':
             return np.sort(np.random.uniform(self.start, self.stop, self.n))
