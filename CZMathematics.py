@@ -5,7 +5,7 @@ import numpy as np
 
 class InvalidParameter(ValueError):
     """
-    Empty execption to notify GUI when an invalid parameter is passed to a function
+    Empty exception to notify GUI when an invalid parameter is passed to a function
     """
     pass
 
@@ -15,9 +15,7 @@ class TwoParameterFunction(ABC):
     General abstract base class for two-parameter functions of a single variable.
 
     Enforces interface for getting descriptions, getting/setting parameter values, evaluating function
-
     Parameters A and B are private to force getter/setter methods and therefore ensure they are always numeric type.
-
     Derived classes should modify constructor to uniquely specify the following attributes:
         name
         description
@@ -36,6 +34,14 @@ class TwoParameterFunction(ABC):
         self.raw = ""
         self.A_desc = ""
         self.B_desc = ""
+
+    @abstractmethod
+    def evaluate(self, value):
+        '''
+        :return:
+            double or list of doubles: evaluation of function at value or list of values
+        '''
+        pass
 
     def get_name(self):
         '''
@@ -98,14 +104,6 @@ class TwoParameterFunction(ABC):
         '''
         return self._B
 
-    @abstractmethod
-    def evaluate(self, value):
-        '''
-        :return:
-            double or list of doubles: evaluation of function at value or list of values
-        '''
-        pass
-
 
 class DampedOscillator(TwoParameterFunction):
     """
@@ -117,7 +115,7 @@ class DampedOscillator(TwoParameterFunction):
         super().__init__(A, B)
         self.name = "Damped_Oscillator"
         self.description = "Represents the behavior of an exponentially decaying sinusoid"
-        self.raw = "A*e^(-x/B)"
+        self.raw = "A*sin(x*2pi)*e^(-x/B)"
         self.A_desc = "Initial Amplitude"
         self.B_desc = "Decay constant"
 
@@ -135,7 +133,7 @@ class UnstableOscillator(TwoParameterFunction):
         super().__init__(A, B)
         self.name = "Unstable_Oscillator"
         self.description = "Represents the behavior of an exponentially growing sinusoid"
-        self.raw = "A*e^(x/B)"
+        self.raw = "A*sin(x*2pi)*e^(x/B)"
         self.A_desc = "Initial amplitude"
         self.B_desc = "Growth constant"
 
@@ -150,8 +148,8 @@ class Pyramid(TwoParameterFunction):
     Draws a pyramid of height A with B steps. If there are not enough points to draw B steps then draws a triangle.
     """
 
-    def __init__(self, A=10, B=10):
-        super().__init__()
+    def __init__(self, A=10.0, B=10.0):
+        super().__init__(A, B)
         self.name = "Pyramid_Routine"
         self.description = "Draws a pyramid shape on the plot"
         self.raw = "Pyramid shape"
@@ -159,7 +157,7 @@ class Pyramid(TwoParameterFunction):
         self.B_desc = "Number of layers"
 
     def evaluate(self, xvals):
-        pass
+        return xvals*2
 
 
 class Dataset:
